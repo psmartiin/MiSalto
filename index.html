@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="MyJump">
+  
+  <title>MyJump Web App</title>
+  
+  <style>
+    body { font-family: -apple-system, sans-serif; margin: 0; background: #121212; color: white; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+    header { background: #0a0a0a; padding: 20px; text-align: center; font-size: 22px; font-weight: 800; border-bottom: 1px solid #333;}
+    .video-container { width: 100%; background: #000; height: 35vh; display: flex; justify-content: center; align-items: center; position: relative;}
+    video { max-width: 100%; max-height: 100%; }
+    .controls { padding: 15px 20px; display: flex; flex-direction: column; gap: 12px; flex-grow: 1; overflow-y: auto;}
+    .row { display: flex; justify-content: space-between; gap: 10px; }
+    button, .btn-label { flex: 1; padding: 12px; border: none; border-radius: 12px; font-size: 15px; font-weight: bold; color: white; cursor: pointer; text-align: center; box-sizing: border-box; display: block; transition: 0.2s;}
+    button:active, .btn-label:active { transform: scale(0.95); opacity: 0.8; }
+    
+    .btn-red { background: #ff3b30; }
+    .btn-blue { background: #007aff; }
+    .btn-orange { background: #ff9500; }
+    .btn-purple { background: #af52de; }
+    .scrub-btn { background: #333; font-size: 20px; padding: 10px; }
+
+    .fps-container { display: flex; justify-content: space-between; align-items: center; background: #1c1c1e; padding: 10px 15px; border-radius: 12px; }
+    select { background: #333; color: white; border: none; padding: 8px 12px; border-radius: 8px; font-size: 14px; font-weight: bold; outline: none; }
+    
+    .result { text-align: center; padding: 20px; background: #1c1c1e; border-top-left-radius: 25px; border-top-right-radius: 25px; box-shadow: 0 -5px 20px rgba(0,0,0,0.5);}
+    .height-text { font-size: 50px; color: #32d74b; font-weight: 900; margin: 0;}
+    input[type="file"] { display: none; }
+  </style>
+</head>
+<body>
+
+  <header>MyJump</header>
+
+  <div class="video-container">
+    <video id="videoPlayer" playsinline controls></video>
+  </div>
+
+  <div class="controls">
+    
+    <div class="row">
+      <label class="btn-label btn-red">
+        🔴 Grabar
+        <input type="file" accept="video/*" capture="environment" id="videoCamera">
+      </label>
+      
+      <label class="btn-label btn-blue">
+        📁 Galería
+        <input type="file" accept="video/*" id="videoGallery">
+      </label>
+    </div>
+
+    <div class="fps-container">
+      <span style="font-size: 14px; color: #a1a1a6; font-weight: bold;">Tipo de Vídeo:</span>
+      <select id="velocidadSelector" onchange="calcular()">
+        <option value="1">Normal (Tiempo Real)</option>
+        <option value="4">Cámara Lenta (120 FPS)</option>
+        <option value="8">Súper Lenta (240 FPS)</option>
+      </select>
+    </div>
+
+    <div style="text-align: center; font-size: 13px; color: #888;">
+      Ajuste fino (Fotograma a fotograma)
+    </div>
+    
+    <div class="row">
+      <button class="scrub-btn" onclick="moverVideo(-1)">⏪ Atrás</button>
+      <button class="scrub-btn" onclick="moverVideo(1)">Adelante ⏩</button>
+    </div>
+
+    <div class="row">
+      <button class="btn-orange" onclick="marcarDespegue()">
+        1. Despegue<br><span id="txtDespegue" style="font-size:12px; font-weight:normal">--</span>
+      </button>
+      <button class="btn-purple" onclick="marcarAterrizaje()">
+        2. Aterrizaje<br><span id="txtAterrizaje" style="font-size:12px; font-weight:normal">--</span>
+      </button>
+    </div>
+  </div>
+
+  <div class="result">
+    <div style="color:#a1a1a6; font-size:14px; margin-bottom: 2px;">
+      Tiempo real en el aire: <span id="txtVuelo">0.000</span> seg
+    </div>
+    <div class="height-text" id="txtAltura">0.0 cm</div>
+    <div style="font-size:12px; font-weight:800; letter-spacing:1.5px; color:#fff;">ALTURA CALCULADA</div>
+  </div>
+
+  <script>
+    const video = document.getElementById('videoPlayer');
+    let tDespegue = null;
+    let tAterrizaje = null;
+
+    function procesarVideo(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      
+      const url = URL.createObjectURL(file);
+      video.src = url;
+
+      tDespegue = null; 
+      tAterrizaje = null;
+      document.getElementById('txtDespegue').innerText = '--';
+      document.getElementById('txtAterrizaje').innerText = '--';
+      document.getElementById('txtAltura').innerText = '0.0 cm';
+      document.getElementById('txtVuelo').innerText = '0.000';
+      
+      // Si el usuario usa la cámara normal desde la web, forzamos "Normal"
+      if(e.target.id === 'videoCamera') {
+        document.getElementById('velocidadSelector').value = "1";
+      }
+    }
+
+    document.getElementById('videoCamera').addEventListener('change', procesarVideo);
+    document.getElementById('videoGallery').addEventListener('change', procesarVideo);
+
+    function moverVideo(direccionFotogramas) {
+      // Los vídeos exportados por iOS a la web se reproducen a 30 FPS.
+      // Por tanto, 1 fotograma de avance en el reproductor siempre es 1/30 segundos.
+      const tiempoPorFotogramaVideo = 1 / 30; 
+      
+      video.pause();
+      video.currentTime += (tiempoPorFotogramaVideo * direccionFotogramas);
+    }
+
+    function marcarDespegue() {
+      tDespegue = video.currentTime;
+      document.getElementById('txtDespegue').innerText = tDespegue.toFixed(3) + 's';
+      calcular();
+    }
+
+    function marcarAterrizaje() {
+      tAterrizaje = video.currentTime;
+      document.getElementById('txtAterrizaje').innerText = tAterrizaje.toFixed(3) + 's';
+      calcular();
+    }
+
+    function calcular() {
+      if (tDespegue !== null && tAterrizaje !== null) {
+        // Este es el tiempo del vídeo (estirado si es cámara lenta)
+        let tiempoVueloReproduccion = tAterrizaje - tDespegue;
+        
+        if (tiempoVueloReproduccion <= 0) {
+          alert("El aterrizaje debe ser posterior al despegue.");
+          return;
+        }
+        
+        // Obtenemos el factor de lentitud (1, 4 u 8)
+        const factorLentitud = parseFloat(document.getElementById('velocidadSelector').value);
+        
+        // LA SOLUCIÓN: Convertimos el tiempo falso al tiempo real
+        let tiempoVueloReal = tiempoVueloReproduccion / factorLentitud;
+        
+        document.getElementById('txtVuelo').innerText = tiempoVueloReal.toFixed(3);
+        
+        // FÓRMULA DE CINEMÁTICA con el tiempo real
+        let alturaMetros = ((tiempoVueloReal * tiempoVueloReal) * 9.8) / 8;
+        let alturaCm = alturaMetros * 100;
+        
+        document.getElementById('txtAltura').innerText = alturaCm.toFixed(1) + ' cm';
+      }
+    }
+  </script>
+</body>
+</html>
