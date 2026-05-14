@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="MiSalto">
+  <link rel="stylesheet" href="styles.css">
+  
+  <title>MiSalto</title>
+</head>
+<body>
+
+  <header>MiSalto</header>
+
+  <div class="centropagina">
+    <div class="video-container">
+      <video id="videoPlayer" playsinline controls></video>
+    </div>
+    
+
+    <div class="controls">
+
+      <div class="row">
+        <label class="btn-label btn-blue" style="border: 2px solid #007aff; background: rgba(0, 122, 255, 0.2);">
+          <span style="font-size: 20px;">🏃‍♂️Subir Vídeo<br>
+          <input type="file" accept="video/*" id="videoGallery">
+        </label>
+      </div>
+
+      <div class="fps-container">
+        <span style="font-size: 14px; color: #a1a1a6; font-weight: bold;">Tipo de Vídeo:</span>
+        <select id="velocidadSelector" onchange="calcular()">
+          <option value="1">Normal (30/60 FPS)</option>
+          <option value="4" selected>Cámara Lenta (120 FPS)</option>
+          <option value="8">Súper Lenta (240 FPS)</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="derecha">
+      <div class="controls1">
+        
+        <div class="row">
+          <button class="scrub-btn" onclick="moverVideo(-1)">⏪ Fotograma Atrás</button>
+          <button class="scrub-btn" onclick="moverVideo(1)">Fotograma Adelante ⏩</button>
+        </div>
+
+        <div class="row">
+          <button class="btn-orange" onclick="marcarDespegue()">
+            1. Despegue<br><span id="txtDespegue" style="font-size:12px; font-weight:normal">--</span>
+          </button>
+          <button class="btn-purple" onclick="marcarAterrizaje()">
+            2. Aterrizaje<br><span id="txtAterrizaje" style="font-size:12px; font-weight:normal">--</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="result">
+        <div style="color:#a1a1a6; font-size:16px; margin-bottom: 2px;">
+          Tiempo en el aire: <span id="txtVuelo">0.000</span> s
+        </div>
+        <div class="height-text" id="txtAltura">0.0 cm</div>
+        <button class="btn-reset" onclick="reiniciarMarcadores()">🔄 Resetear</button>
+      </div>
+    </div>
+    <script src="script.js"></script>
+  </div>
+
+</body>
+</html>
